@@ -16,7 +16,8 @@ const server = http.createServer((req, res) => {
   req.on('data', chunk => { raw += chunk; if (raw.length > 30000) req.destroy(); });
   req.on('end', async () => {
     try {
-      const rawKey = process.env.OPENAI_API_KEY || '';
+      const rawKey = [process.env.OPENAI_API_KEY, process.env.OpenAI_API_KEY]
+        .find(value => /\bsk-[A-Za-z0-9_-]+\b/.test(value || '')) || '';
       const key = rawKey.match(/\bsk-[A-Za-z0-9_-]+\b/)?.[0];
       if (!key) return send(res, 400, { error: 'OPENAI_API_KEY is not set.' });
       const { ingredients = [], servings = 2, note = '' } = JSON.parse(raw);
