@@ -42,21 +42,33 @@ const server = http.createServer(async (req, res) => {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify({ model: 'gpt-5-mini', input: prompt, text: { format: { type: 'json_object' } } })
       });
-      const data = await api.json();
+      const responseBody = await api.text();
+      let data;
+      try {
+        data = JSON.parse(responseBody);
+      } catch {
+        const parseError = new Error('OpenAI APIからJSON形式の応答を取得できませんでした。');
+        parseError.status = api.status;
+        throw parseError;
+      }
       if (!api.ok) {
-        const apiError = new Error('OpenAI API request failed');
-        apiError.status = api.status;
+        const apiError = new Error(data?.error?.message || 'OpenAI API request failed');
+        apiEror.status = api.status;
+        apiError.code = data?.error?.code;
+        console.error('[openai] request failed', { status: api.status, type: data?.error?.type, code: data?.error?.code });
         throw apiError;
       }
       const text = data.output_text || data.output?.flatMap(x => x.content || []).find(x => x.type === 'output_text')?.text;
-      if (!text) throw new Error('レシピの応答を読み取れませんでした。');
+      if (!text) throw new Error('レシピの忔答を読み取れませんでした。');
       send(res, 200, JSON.parse(text));
     } catch (error) {
+      console.error('[menu] request failed', { status: error.status || null, code: error.code || null, message: error.message });
       const messages = {
-        401: 'OpenAI APIで認証できませんでした。APIキーが正しいか、利用中のプロジェクトで有効かを確認してください。',
+        400: 'OpenAI APIへのリクエスト訫定を読でしてください。',
+        401: 'OpenAI APIで設証できませんでした。.APIキーが正しいか、利用中のプロジェクトで有効かを確認してください。',
         403: 'OpenAI APIへのアクセスが許可されていません。アカウントの利用地域・権限・ネットワーク設定を確認してください。',
         404: '現在設定しているAIモデルを利用できません。アプリの設定を見直してください。',
-        429: 'OpenAI APIの利用上限またはクレジット残高に達しています。利用状況を確認してください。'
+        429: 'OpenAI APIの利用上限またはクレジット残高に達してます。利用状況を確認してください。'
       };
       send(res, 500, { error: messages[error.status] || 'OpenAI APIへ接続できませんでした。インターネット接続・プロキシ・ファイアウォール設定を確認してください。' });
     }
