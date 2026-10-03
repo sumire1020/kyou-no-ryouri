@@ -1,0 +1,11 @@
+# APIキー・ローカル設定（絶対にコミットしない）
+.env
+.env.*
+!.env.example
+
+# 実行時の不要ファイル
+node_modules/
+npm-debug.log*
+.vercel/
+*.log
+
