@@ -16,7 +16,8 @@ const server = http.createServer((req, res) => {
   req.on('data', chunk => { raw += chunk; if (raw.length > 30000) req.destroy(); });
   req.on('end', async () => {
     try {
-      const key = process.env.OPENAI_API_KEY;
+      const rawKey = process.env.OPENAI_API_KEY || '';
+      const key = rawKey.match(/\bsk-[A-Za-z0-9_-]+\b/)?.[0];
       if (!key) return send(res, 400, { error: 'OPENAI_API_KEY is not set.' });
       const { ingredients = [], servings = 2, note = '' } = JSON.parse(raw);
       if (!Array.isArray(ingredients) || !ingredients.length) return send(res, 400, { error: 'Add at least one ingredient.' });
@@ -39,8 +40,7 @@ const server = http.createServer((req, res) => {
       send(res, 200, JSON.parse(text));
     } catch (error) {
       console.error('[menu]', { status: error.status || null, code: error.code || null, message: error.message });
-      const messages = { 400: 'OpenAI request settings need attention.', 401: 'OpenAI authentication failed. Check the API key.', 403: 'OpenAI access was denied.', 404: 'The selected AI model is unavailable.', 429: 'OpenAI usage limit or credit has been reached.' };
-      send(res, 500, { error: messages[error.status] || 'OpenAI connection failed. Check the server log.' });
+      send(res, 500, { error: `OpenAI failed (status ${error.status || 'unknown'}).` });
     }
   });
 });
